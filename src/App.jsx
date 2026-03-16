@@ -1,144 +1,192 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import questionsData from './questions.json';
 
+const BASE = import.meta.env.BASE_URL;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function App() {
-  const [step, setStep] = useState('landing'); // 'landing', 'quiz', 'results'
+  const [step, setStep] = useState('landing');
   const [examQuestions, setExamQuestions] = useState([]);
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [feedback, setFeedback] = useState(false);
+  const [wrongAnswers, setWrongAnswers] = useState([]);
 
-  const startQuiz = () => {
-    // Shuffle and pick 30 questions for a standard exam
-    const shuffled = [...questionsData].sort(() => 0.5 - Math.random());
-    setExamQuestions(shuffled.slice(0, 30));
+  const totalCount = questionsData.length;
+
+  const startQuiz = useCallback(() => {
+    const picked = shuffle(questionsData).slice(0, 30);
+    setExamQuestions(picked);
     setStep('quiz');
-    setCurrentQuestionIdx(0);
+    setIdx(0);
     setScore(0);
-    setSelectedOption(null);
-  };
+    setSelected(null);
+    setFeedback(false);
+    setWrongAnswers([]);
+  }, []);
 
-  const handleOptionSelect = (option) => {
-    if (showFeedback) return;
-    setSelectedOption(option);
-  };
+  const handleSelect = useCallback((opt) => {
+    if (feedback) return;
+    setSelected(opt);
+  }, [feedback]);
 
-  const checkAnswer = () => {
-    if (selectedOption === examQuestions[currentQuestionIdx].answer) {
-      setScore(score + 1);
+  const handleNext = useCallback(() => {
+    if (!selected || feedback) return;
+    const q = examQuestions[idx];
+    const isCorrect = selected === q.answer;
+    if (isCorrect) {
+      setScore(s => s + 1);
+    } else {
+      setWrongAnswers(prev => [...prev, { question: q.question, selected, correct: q.answer }]);
     }
-    setShowFeedback(true);
+    setFeedback(true);
     setTimeout(() => {
-      setShowFeedback(false);
-      setSelectedOption(null);
-      if (currentQuestionIdx + 1 < examQuestions.length) {
-        setCurrentQuestionIdx(currentQuestionIdx + 1);
+      setFeedback(false);
+      setSelected(null);
+      if (idx + 1 < examQuestions.length) {
+        setIdx(i => i + 1);
       } else {
         setStep('results');
       }
-    }, 1200);
-  };
+    }, 1000);
+  }, [selected, feedback, examQuestions, idx]);
 
+  // ── Landing ──
   if (step === 'landing') {
     return (
-      <div className="premium-container">
+      <div className="app-wrapper">
         <div className="card fade-in">
-          <h1 className="title">Examen de Licencia</h1>
-          <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginBottom: '2rem' }}>
-            Simulador oficial con las preguntas actualizadas. Prepárate para aprobar.
+          <div className="landing-icon">🚗</div>
+          <h1 className="landing-title">Examen de Licencia de Conducir</h1>
+          <p className="landing-subtitle">
+            Simulador con preguntas oficiales actualizadas. 
+            Praticá las veces que quieras hasta sentirte seguro.
           </p>
-          <div style={{ textAlign: 'center', color: 'var(--primary)', marginBottom: '1.5rem', fontWeight: 'bold' }}>
-            {questionsData.length} preguntas disponibles
-          </div>
-          <button className="button" onClick={startQuiz}>Empezar Examen (30 Qs)</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'quiz') {
-    const question = examQuestions[currentQuestionIdx];
-    const progress = ((currentQuestionIdx + 1) / examQuestions.length) * 100;
-
-    return (
-      <div className="premium-container">
-        <div className="card fade-in" style={{ maxWidth: '700px' }}>
-          <div className="progress">
-            <div className="progress-bar" style={{ width: `${progress}%` }}></div>
-          </div>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Pregunta {currentQuestionIdx + 1} de {examQuestions.length}
-          </p>
-          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.3rem', lineHeight: '1.4' }}>{question.question}</h2>
-          
-          {question.image && (
-            <div style={{ width: '100%', marginBottom: '1.5rem', borderRadius: '15px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <img 
-                src={question.image} 
-                alt="Imagen de referencia" 
-                style={{ width: '100%', display: 'block', maxHeight: '300px', objectFit: 'contain', background: '#fff' }} 
-              />
+          <div className="stat-row">
+            <div className="stat-item">
+              <div className="stat-value">{totalCount}</div>
+              <div className="stat-label">Preguntas</div>
             </div>
-          )}
-
-          <div className="options-container">
-            {question.options.map((option, idx) => {
-              const isCorrect = option === question.answer;
-              const isSelected = selectedOption === option;
-              let className = `option ${isSelected ? 'selected' : ''}`;
-              
-              if (showFeedback) {
-                if (isCorrect) className += ' correct';
-                if (isSelected && !isCorrect) className += ' wrong';
-              }
-
-              return (
-                <div 
-                  key={idx}
-                  className={className}
-                  onClick={() => handleOptionSelect(option)}
-                >
-                  <span style={{ fontWeight: '700', marginRight: '0.8rem', color: 'var(--primary)' }}>
-                    {String.fromCharCode(65 + idx)}.
-                  </span>
-                  {option}
-                </div>
-              );
-            })}
+            <div className="stat-item">
+              <div className="stat-value">30</div>
+              <div className="stat-label">Por examen</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-value">80%</div>
+              <div className="stat-label">Para aprobar</div>
+            </div>
           </div>
-
-          <button 
-            className="button" 
-            style={{ marginTop: '1rem', opacity: selectedOption ? 1 : 0.5 }}
-            disabled={!selectedOption || showFeedback}
-            onClick={checkAnswer}
-          >
-            {showFeedback ? 'Verificando...' : 'Siguiente'}
+          <button className="btn" id="start-exam" onClick={startQuiz}>
+            Comenzar Examen
           </button>
         </div>
       </div>
     );
   }
 
-  if (step === 'results') {
-    const percentage = Math.round((score / examQuestions.length) * 100);
-    const passed = percentage >= 80;
+  // ── Quiz ──
+  if (step === 'quiz') {
+    const q = examQuestions[idx];
+    const progress = ((idx + 1) / examQuestions.length) * 100;
 
     return (
-      <div className="premium-container">
-        <div className="card fade-in">
-          <h1 className="title">{passed ? '¡Aprobado!' : 'Sigue Practicando'}</h1>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontSize: '4rem', fontWeight: '800', color: passed ? 'var(--success)' : 'var(--error)' }}>
-              {percentage}%
+      <div className="app-wrapper">
+        <div className="card fade-in" key={q.id}>
+          <div className="quiz-header">
+            <div className="quiz-counter">
+              Pregunta <span>{idx + 1}</span> / {examQuestions.length}
             </div>
-            <p style={{ color: 'var(--text-dim)' }}>
-              Has acertado {score} de {examQuestions.length} preguntas.
-            </p>
-            {!passed && <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Necesitas al menos 80% para aprobar.</p>}
+            <div className="quiz-score">
+              Correctas: <span>{score}</span>
+            </div>
           </div>
-          <button className="button" onClick={() => setStep('landing')}>Volver al Inicio</button>
+
+          <div className="progress">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+
+          <h2 className="question-text">{q.question}</h2>
+
+          {q.image && (
+            <div className="question-image">
+              <img
+                src={`${BASE}${q.image}`}
+                alt="Imagen de referencia"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            </div>
+          )}
+
+          <div className="options-list">
+            {q.options.map((opt, i) => {
+              const isCorrect = opt === q.answer;
+              const isSel = selected === opt;
+              let cls = 'opt';
+              if (isSel) cls += ' selected';
+              if (feedback && isCorrect) cls += ' correct';
+              if (feedback && isSel && !isCorrect) cls += ' wrong';
+
+              return (
+                <div key={i} className={cls} onClick={() => handleSelect(opt)}>
+                  <div className="opt-letter">{String.fromCharCode(65 + i)}</div>
+                  <div className="opt-text">{opt}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            className="btn"
+            disabled={!selected || feedback}
+            onClick={handleNext}
+          >
+            {feedback ? (selected === q.answer ? '✓ Correcto' : '✗ Incorrecto') : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Results ──
+  if (step === 'results') {
+    const pct = Math.round((score / examQuestions.length) * 100);
+    const passed = pct >= 80;
+
+    return (
+      <div className="app-wrapper">
+        <div className="card fade-in">
+          <div className="results-icon">{passed ? '🎉' : '📚'}</div>
+          <div className={`results-score ${passed ? 'passed' : 'failed'}`}>{pct}%</div>
+          <div className="results-label">
+            {passed ? '¡Felicidades, aprobaste!' : 'No alcanzaste el mínimo'}
+          </div>
+          <div className="results-detail">
+            Acertaste {score} de {examQuestions.length} preguntas.
+            {!passed && <><br />Necesitás al menos 80% para aprobar.</>}
+          </div>
+
+          <div className="results-bar">
+            <div
+              className={`results-bar-fill ${passed ? 'passed' : 'failed'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
+          <div className="btn-group">
+            <button className="btn" onClick={startQuiz}>Intentar de Nuevo</button>
+            <button className="btn btn-outline" onClick={() => setStep('landing')}>
+              Volver al Inicio
+            </button>
+          </div>
         </div>
       </div>
     );
