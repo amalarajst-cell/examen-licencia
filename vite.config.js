@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/REPLACE_WITH_REPO_NAME/',
+  base: '/examen-licencia/',
 })

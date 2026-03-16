@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://REPLACE_WITH_GITHUB_USER.github.io/REPLACE_WITH_REPO_NAME",
+  "homepage": "https://amalarajst-cell.github.io/examen-licencia",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
