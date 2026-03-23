@@ -75,7 +75,7 @@ function App() {
     return (
       <div className="app-wrapper">
         <div className="card fade-in">
-          <div className="landing-icon">🚗</div>
+          <img src={`${BASE}hero-image.png`} alt="Examen de Licencia" className="landing-image" />
           <h1 className="landing-title">Examen de Licencia de Conducir</h1>
           <p className="landing-subtitle">
             Simulador con preguntas oficiales actualizadas. 
