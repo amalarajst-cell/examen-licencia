@@ -23,8 +23,17 @@ function App() {
 
   const totalCount = questionsData.length;
 
-  const startQuiz = useCallback(() => {
-    const picked = shuffle(questionsData).slice(0, 30);
+  const uniqueCategories = useMemo(() => {
+    const cats = [...new Set(questionsData.map(q => q.category).filter(Boolean))].sort();
+    return ["Todas las categorías", ...cats];
+  }, []);
+
+  const startQuiz = useCallback((category) => {
+    let pool = questionsData;
+    if (category !== "Todas las categorías") {
+      pool = questionsData.filter(q => q.category === category);
+    }
+    const picked = shuffle(pool).slice(0, Math.min(30, pool.length));
     setExamQuestions(picked);
     setStep('quiz');
     setIdx(0);
@@ -42,11 +51,12 @@ function App() {
   const handleNext = useCallback(() => {
     if (!selected || feedback) return;
     const q = examQuestions[idx];
-    const isCorrect = selected === q.answer;
+    const selectedIndex = q.options.indexOf(selected);
+    const isCorrect = selectedIndex === q.correctAnswer;
     if (isCorrect) {
       setScore(s => s + 1);
     } else {
-      setWrongAnswers(prev => [...prev, { question: q.question, selected, correct: q.answer }]);
+      setWrongAnswers(prev => [...prev, { question: q.question, selected, correct: q.options[q.correctAnswer] }]);
     }
     setFeedback(true);
     setTimeout(() => {
@@ -85,9 +95,14 @@ function App() {
               <div className="stat-label">Para aprobar</div>
             </div>
           </div>
-          <button className="btn" id="start-exam" onClick={startQuiz}>
-            Comenzar Examen
-          </button>
+          <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1.5rem', width: '100%' }}>
+            <h3 style={{ margin: '0', fontSize: '1.1rem', color: 'var(--text-color)', textAlign: 'center' }}>Seleccioná una categoría para comenzar:</h3>
+            {uniqueCategories.map(cat => (
+              <button key={cat} className="btn" onClick={() => startQuiz(cat)}>
+                {cat} ({cat === "Todas las categorías" ? totalCount : questionsData.filter(q => q.category === cat).length} preg.)
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -128,7 +143,7 @@ function App() {
 
           <div className="options-list">
             {q.options.map((opt, i) => {
-              const isCorrect = opt === q.answer;
+              const isCorrect = i === q.correctAnswer;
               const isSel = selected === opt;
               let cls = 'opt';
               if (isSel) cls += ' selected';
@@ -149,7 +164,7 @@ function App() {
             disabled={!selected || feedback}
             onClick={handleNext}
           >
-            {feedback ? (selected === q.answer ? '✓ Correcto' : '✗ Incorrecto') : 'Confirmar'}
+            {feedback ? (q.options.indexOf(selected) === q.correctAnswer ? '✓ Correcto' : '✗ Incorrecto') : 'Confirmar'}
           </button>
         </div>
       </div>
@@ -182,9 +197,8 @@ function App() {
           </div>
 
           <div className="btn-group">
-            <button className="btn" onClick={startQuiz}>Intentar de Nuevo</button>
-            <button className="btn btn-outline" onClick={() => setStep('landing')}>
-              Volver al Inicio
+            <button className="btn" onClick={() => setStep('landing')}>
+              Volver al Inicio / Otra categoría
             </button>
           </div>
         </div>
