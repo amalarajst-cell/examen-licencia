@@ -24,14 +24,17 @@ function App() {
   const totalCount = questionsData.length;
 
   const uniqueCategories = useMemo(() => {
-    const cats = [...new Set(questionsData.map(q => q.category).filter(Boolean))].sort();
-    return ["Todas las categorías", ...cats];
+    return [...new Set(questionsData.map(q => q.category).filter(Boolean))].sort();
   }, []);
 
-  const startQuiz = useCallback((category) => {
+  const uniqueTopics = useMemo(() => {
+    return [...new Set(questionsData.map(q => q.topic).filter(Boolean))].sort();
+  }, []);
+
+  const startQuiz = useCallback(({ type, value }) => {
     let pool = questionsData;
-    if (category !== "Todas las categorías") {
-      pool = questionsData.filter(q => q.category === category);
+    if (value !== "Todas las preguntas") {
+      pool = questionsData.filter(q => q[type] === value);
     }
     const picked = shuffle(pool).slice(0, Math.min(30, pool.length));
     setExamQuestions(picked);
@@ -96,12 +99,24 @@ function App() {
             </div>
           </div>
           <div className="btn-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1.5rem', width: '100%' }}>
-            <h3 style={{ margin: '0', fontSize: '1.1rem', color: 'var(--text-color)', textAlign: 'center' }}>Seleccioná una categoría para comenzar:</h3>
+            
+            <h3 style={{ margin: '0', fontSize: '1.05rem', color: 'var(--text-dim)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Por Tipo de Vehículo</h3>
             {uniqueCategories.map(cat => (
-              <button key={cat} className="btn" onClick={() => startQuiz(cat)}>
-                {cat} ({cat === "Todas las categorías" ? totalCount : questionsData.filter(q => q.category === cat).length} preg.)
+              <button key={cat} className="btn" onClick={() => startQuiz({ type: 'category', value: cat })}>
+                {cat} ({questionsData.filter(q => q.category === cat).length} preg.)
               </button>
             ))}
+
+            <h3 style={{ margin: '1rem 0 0', fontSize: '1.05rem', color: 'var(--text-dim)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>Por Área Temática</h3>
+            {uniqueTopics.map(topic => (
+              <button key={topic} className="btn btn-outline" onClick={() => startQuiz({ type: 'topic', value: topic })}>
+                {topic} ({questionsData.filter(q => q.topic === topic).length} preg.)
+              </button>
+            ))}
+
+            <button className="btn" style={{marginTop: '0.5rem', background: 'var(--card-bg)', border: '1px solid var(--text-dim)', color: 'var(--text)'}} onClick={() => startQuiz({ type: 'category', value: 'Todas las preguntas' })}>
+              Mezclar Todas las Preguntas ({totalCount} preg.)
+            </button>
           </div>
         </div>
       </div>
